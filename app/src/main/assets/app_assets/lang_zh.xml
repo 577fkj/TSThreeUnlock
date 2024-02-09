@@ -238,7 +238,7 @@
  </entry>
  <entry>
   <key>bookmark.entry.serverport</key>
-  <value>港口城市</value>
+  <value>服务器端口</value>
  </entry>
  <entry>
   <key>bookmark.entry.serverpassword</key>
@@ -518,11 +518,11 @@
  </entry>
  <entry>
   <key>settings.seperator</key>
-  <value>水平线</value>
+  <value>分隔线</value>
  </entry>
  <entry>
   <key>settings.seperator.text</key>
-  <value>显示水平线</value>
+  <value>显示分隔线</value>
  </entry>
  <entry>
   <key>bookmark.entry.queryclient</key>
@@ -846,7 +846,7 @@
  </entry>
  <entry>
   <key>settings.badges.loading</key>
-  <value>正在检查代码。。。</value>
+  <value>正在检查代码...</value>
  </entry>
  <entry>
   <key>settings.badges.configurefailedsyncinactive.info</key>
@@ -2022,7 +2022,7 @@
  </entry>
  <entry>
   <key>connectiondialog.info</key>
-  <value>连接。。。</value>
+  <value>连接中...</value>
  </entry>
  <entry>
   <key>connectiondialog.step0</key>
@@ -2598,11 +2598,11 @@
  </entry> 
  <entry>
   <key>connection.reconnect.retry</key>
-  <value>重新连接。。。</value>
+  <value>重新连接...</value>
  </entry>
  <entry>
   <key>connection.reconnect.retry.count</key>
-  <value>重新连接。。。（%1$d/%2$d）</value>
+  <value>重新连接...（%1$d/%2$d）</value>
  </entry>
  <entry>
   <key>connection.error.initialization</key>
@@ -2990,7 +2990,7 @@
  </entry>
  <entry>
   <key>connectioninfoclient.loading</key>
-  <value>接收。。。</value>
+  <value>接收...</value>
  </entry>
  <entry>
   <key>connectioninfoclient.title</key>
@@ -3086,7 +3086,7 @@
  </entry>
  <entry>
   <key>banlist.creator</key>
-  <value>造物主</value>
+  <value>管理员</value>
  </entry>
  <entry>
   <key>dialog.license.reject.info</key>
