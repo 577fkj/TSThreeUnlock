@@ -1,7 +1,5 @@
 package cn.fkj233.tsunlocker.hook
 
-import android.content.Context
-import android.content.res.AssetFileDescriptor
 import android.content.res.AssetManager
 import android.util.Base64
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
@@ -11,7 +9,8 @@ import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.log.loggerD
 import com.highcapable.yukihookapi.hook.log.loggerE
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
-import java.nio.ByteBuffer
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedHelpers
 import java.security.KeyFactory
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
@@ -19,12 +18,10 @@ import java.security.spec.PKCS8EncodedKeySpec
 
 @InjectYukiHookWithXposed
 class HookEntry : IYukiHookXposedInit {
-
     override fun onInit() = configs {
         debugLog {
             tag = "TS_Hook"
         }
-//        isDebug = false
     }
 
     data class LVL(val code: Int, val nonce: Int, val packName: String, val version: Int, val userId: String, val timestamp: Long = System.currentTimeMillis(), val extra: HashMap<String, String>) {
@@ -70,19 +67,45 @@ class HookEntry : IYukiHookXposedInit {
     override fun onHook() = encase {
         loadApp(name = "com.teamspeak.ts3client") {
             System.loadLibrary("native")
-            AssetManager::class.java.hook {
-                injectMember {
-                    method {
-                        name = "open"
+
+            // Wtf, use yuki api appear bug
+            XposedHelpers.findAndHookMethod(AssetManager::class.java, "open", String::class.java, Int::class.java, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val path = param.args[0].toString()
+                    loggerD(msg = "open: $path")
+                    if (path.startsWith("app_assets")) {
+                        return
                     }
-                    beforeHook {
-                        loggerD(msg = "open: ${args[0]}")
-                        if (args[0] == "lang/lang_eng.xml") {
-                            result = HookEntry::class.java.classLoader?.getResourceAsStream("assets/lang_zh.xml")
-                        }
+                    if (path == "lang/lang_eng.xml") {
+                        loggerD(msg = "replace lang_eng.xml to lang_zh.xml")
+                        param.result = moduleAppResources.assets.open(
+                            "app_assets/lang_zh.xml",
+                            AssetManager.ACCESS_STREAMING
+                        )
+                    } else if (path.startsWith("sound/female/")){
+                        param.result = moduleAppResources.assets.open(
+                            "app_assets/$path",
+                            AssetManager.ACCESS_STREAMING
+                        )
                     }
                 }
-            }
+            })
+
+            XposedHelpers.findAndHookMethod(AssetManager::class.java, "openFd", String::class.java, object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val path = param.args[0].toString()
+                    loggerD(msg = "openFd: $path")
+                    if (path.startsWith("app_assets")) {
+                        return
+                    }
+                    if (path.startsWith("sound/female/")){
+                        param.result = moduleAppResources.assets.openFd(
+                            "app_assets/$path"
+                        )
+                    }
+                }
+            })
+
             findClass(name = "k3.m").hook {
                 injectMember {
                     method {
