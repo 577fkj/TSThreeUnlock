@@ -1,10 +1,13 @@
-import com.android.build.gradle.internal.tasks.factory.dependsOn
+import java.io.File
+import java.util.Base64
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp") version "1.8.10-1.0.9"
 }
+
+val rsaData = buildRSAData()
 
 android {
     compileSdk = 33
@@ -17,6 +20,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "PUBLIC_KEY", "\"${rsaData.publicKeyBase64}\"")
+        buildConfigField("String", "PRIVATE_KEY", "\"${rsaData.privateKeyBase64}\"")
 
         externalNativeBuild {
             cmake {
@@ -94,6 +100,103 @@ android {
                 }
             }
         }
+    }
+}
+
+tasks.named("preBuild") {
+    doLast {
+        println("Generating config file")
+        generateConfigFile(rsaData.publicKey)
+    }
+}
+
+fun generateConfigFile(byteArray: ByteArray) {
+    val sb = StringBuilder()
+    var count = 0
+    for (i in byteArray.indices) {
+        sb.append("0x%02X".format(byteArray[i]))
+        if (i != byteArray.size - 1) {
+            sb.append(", ")
+        }
+        if (count == 15) {
+            sb.append("\n")
+            sb.append("    ")
+            count = 0
+        } else {
+            count++
+        }
+    }
+
+    val configFile = File("${project.projectDir}/src/main/cpp/native/config.h")
+    configFile.parentFile.mkdirs()
+
+    configFile.writeText("""#ifndef CONFIG_H
+#define CONFIG_H
+
+unsigned char rsa_key[] = {
+    $sb
+};
+
+#endif""")
+}
+
+fun buildRSAData(): RSAData {
+    val publicKey = getRSAKeyPublic()
+    val privateKey = getRSAKeyPrivate()
+    println("publicKey: $publicKey")
+    println("privateKey: $privateKey")
+    return RSAData(Base64.getDecoder().decode(publicKey), Base64.getDecoder().decode(privateKey), publicKey, privateKey)
+}
+
+fun processRSAKey(key: String): String {
+    val replaceList = listOf("-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----", "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----")
+    var b64 = key
+    replaceList.forEach {
+        b64 = b64.replace(it, "")
+    }
+    b64 = b64
+        .replace("\n", "")
+        .replace("\r", "")
+    return b64
+}
+
+fun getRSAKeyPublic(): String {
+    val file = File("${project.rootDir}/keys/public.pem")
+    if (file.exists()) {
+        return processRSAKey(file.readText())
+    }
+    throw Exception("public key not found")
+}
+
+fun getRSAKeyPrivate(): String {
+    val file = File("${project.rootDir}/keys/private.pem")
+    if (file.exists()) {
+        return processRSAKey(file.readText())
+    }
+    throw Exception("private key not found")
+}
+
+data class RSAData(val publicKey: ByteArray, val privateKey: ByteArray, val publicKeyBase64: String, val privateKeyBase64: String) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as RSAData
+
+        if (!publicKey.contentEquals(other.publicKey)) return false
+        if (!privateKey.contentEquals(other.privateKey)) return false
+        if (publicKeyBase64 != other.publicKeyBase64) return false
+        if (privateKeyBase64 != other.privateKeyBase64) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = publicKey.contentHashCode()
+        result = 31 * result + privateKey.contentHashCode()
+        result = 31 * result + publicKeyBase64.hashCode()
+        result = 31 * result + privateKeyBase64.hashCode()
+        return result
     }
 }
 

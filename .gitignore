@@ -89,3 +89,4 @@ lint/tmp/
 # Android Profiling
 *.hprof
 
+app/src/main/cpp/native/config.h
