@@ -362,7 +362,7 @@
  </entry>
  <entry>
   <key>settings.keyselector.info</key>
-  <value>要设置任何所需的组合，请按您想要使用的键（不同设备上的可用键可能有所不同）。要禁用它，请按clear并将其保存为空\n</value>
+  <value>要设置任何所需的组合，请按您想要使用的键（不同设备上的可用键可能有所不同）。要禁用它，请按删除并将其保存为空\n</value>
  </entry>
  <entry>
   <key>settings.keyselector.volumeup</key>
@@ -374,23 +374,23 @@
  </entry>
  <entry>
   <key>settings.keyselector.medianext</key>
-  <value>媒体下一个</value>
+  <value>下一首</value>
  </entry>
  <entry>
   <key>settings.keyselector.mediaprevious</key>
-  <value>媒体先前</value>
+  <value>上一首</value>
  </entry>
  <entry>
   <key>settings.keyselector.mediaplay</key>
-  <value>媒体播放</value>
+  <value>播放/暂停</value>
  </entry>
  <entry>
   <key>settings.keyselector.mediastop</key>
-  <value>媒体停止</value>
+  <value>停止播放</value>
  </entry>
  <entry>
   <key>settings.keyselector.camera</key>
-  <value>照相机</value>
+  <value>相机按钮</value>
  </entry>
  <entry>
   <key>settings.keyselector.headsetbutton</key>
