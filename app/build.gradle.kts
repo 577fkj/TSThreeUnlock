@@ -24,7 +24,7 @@ android {
 
         buildConfigField("String", "PUBLIC_KEY", "\"${rsaData.publicKeyBase64}\"")
         buildConfigField("String", "PRIVATE_KEY", "\"${rsaData.privateKeyBase64}\"")
-        buildConfigField("String", "LANG_URL", "\"https://fastly.jsdelivr.net/gh/577fkj/TSThreeUnlock@main/app/src/main/assets/app_assets/lang_zh.xml\"")
+        buildConfigField("String", "LANG_URL", "\"https://raw.githubusercontent.com/577fkj/TSThreeUnlock/main/app/src/main/assets/app_assets/lang_zh.xml\"")
 
         externalNativeBuild {
             cmake {
