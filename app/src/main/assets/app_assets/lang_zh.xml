@@ -326,19 +326,19 @@
  </entry>
  <entry>
   <key>settings.ptt</key>
-  <value>使用按键说话</value>
+  <value>使用按键通话</value>
  </entry>
  <entry>
   <key>settings.ptt.text</key>
-  <value>启用按键说话</value>
+  <value>启用按键通话</value>
  </entry>
  <entry>
   <key>settings.android_overlay</key>
-  <value>说话按钮始终显示</value>
+  <value>通话按钮始终显示</value>
  </entry>
  <entry>
   <key>settings.android_overlay.text</key>
-  <value>始终可见的按钮</value>
+  <value>按钮始终可见</value>
  </entry>
  <entry>
   <key>settings.warning</key>
@@ -350,11 +350,11 @@
  </entry>
  <entry>
   <key>settings.pttkey</key>
-  <value>设置按键通话键</value>
+  <value>设置通话键</value>
  </entry>
  <entry>
   <key>settings.pttkey.text</key>
-  <value>设置一键通的硬件密钥</value>
+  <value>设置一键通的按键</value>
  </entry>
  <entry>
   <key>settings.keyselector.intercept</key>
@@ -410,7 +410,7 @@
  </entry>
  <entry>
   <key>settings.mutemic.text</key>
-  <value>设置用于静音麦克风的硬件密钥</value>
+  <value>设置用于静音麦克风的按键</value>
  </entry>
  <entry>
   <key>settings.keyselector.currenthotkey</key>
