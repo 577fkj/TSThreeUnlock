@@ -12,6 +12,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.util.Base64
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -114,12 +115,27 @@ class HookEntry : IYukiHookXposedInit {
         context.registerReceiver(broadcastReceiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
     }
 
+    private var zhAudio = true
+    private var zhLang = true
+    private var useOnlineLang = false
+
     @SuppressLint("SetTextI18n")
     override fun onHook() = encase {
         loadApp(name = "com.teamspeak.ts3client") {
             System.loadLibrary("native")
 
-            val assetList = moduleAppResources.assets.list("app_assets")
+            onAppLifecycle(isOnFailureThrowToApp = true) {
+                attachBaseContext { baseContext, hasCalledSuper ->
+                    if (!hasCalledSuper) return@attachBaseContext
+                    val pref = baseContext.getSharedPreferences("TSThree", Context.MODE_PRIVATE)
+                    zhAudio = pref.getBoolean("lang_zh_audio", true)
+                    zhLang = pref.getBoolean("lang_zh", true)
+                    useOnlineLang = pref.getBoolean("use_online_lang", false)
+                    loggerD(msg = "zhAudio: $zhAudio, zhLang: $zhLang, useOnlineLang: $useOnlineLang")
+                }
+            }
+
+            val soundList = moduleAppResources.assets.list("app_assets/sound/female")
             // Wtf, use yuki api appear bug
             XposedHelpers.findAndHookMethod(AssetManager::class.java, "open", String::class.java, Int::class.java, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
@@ -128,10 +144,10 @@ class HookEntry : IYukiHookXposedInit {
                     if (path.startsWith("app_assets")) {
                         return
                     }
-                    if (path == "lang/lang_eng.xml") {
+                    if (path == "lang/lang_eng.xml" && zhLang) {
                         loggerD(msg = "replace lang_eng.xml to lang_zh.xml")
                         val file = File(appContext?.getExternalFilesDir(null), "lang_zh.xml")
-                        if (file.exists() && !BuildConfig.DEBUG) {
+                        if (file.exists() && useOnlineLang) {
                             if (
                                 runCatching {
                                     param.result = file.inputStream()
@@ -145,8 +161,9 @@ class HookEntry : IYukiHookXposedInit {
                             "app_assets/lang_zh.xml",
                             AssetManager.ACCESS_STREAMING
                         )
-                    } else if (path.startsWith("sound/female/")){
-                        if (assetList?.contains(path) == true) {
+                    } else if (path.startsWith("sound/female/") && zhAudio){
+                        val name = path.substringAfterLast("/")
+                        if (soundList?.contains(name) == true) {
                             param.result = moduleAppResources.assets.open(
                                 "app_assets/$path",
                                 AssetManager.ACCESS_STREAMING
@@ -163,8 +180,9 @@ class HookEntry : IYukiHookXposedInit {
                     if (path.startsWith("app_assets")) {
                         return
                     }
-                    if (path.startsWith("sound/female/")){
-                        if (assetList?.contains(path) == true) {
+                    if (path.startsWith("sound/female/") && zhAudio){
+                        val name = path.substringAfterLast("/")
+                        if (soundList?.contains(name) == true) {
                             param.result = moduleAppResources.assets.openFd(
                                 "app_assets/$path"
                             )
@@ -189,10 +207,51 @@ class HookEntry : IYukiHookXposedInit {
                                 AlertDialog.Builder(context)
                                     .setTitle("关于")
                                     .setMessage("当前版本: ${BuildConfig.VERSION_NAME}\n作者：${moduleAppResources.getString(R.string.author)}")
-                                    .setNegativeButton("更新汉化") { dialog, _ ->
+                                    .setView(LinearLayout(context).apply {
+                                        orientation = LinearLayout.VERTICAL
+                                        setPadding(50, 0, 0, 0)
+                                        val pref = context.getSharedPreferences("TSThree", Context.MODE_PRIVATE)
+                                        addView(CheckBox(context).apply {
+                                            text = "中文汉化"
+                                            isChecked = zhLang
+                                            setOnCheckedChangeListener { _, isChecked ->
+                                                zhLang = isChecked
+                                                pref.edit().putBoolean("lang_zh", isChecked).apply()
+                                            }
+                                        })
+                                        addView(CheckBox(context).apply {
+                                            text = "中文语音"
+                                            isChecked = zhAudio
+                                            setOnCheckedChangeListener { _, isChecked ->
+                                                zhAudio = isChecked
+                                                pref.edit().putBoolean("lang_zh_audio", isChecked).apply()
+                                            }
+                                        })
+                                        addView(CheckBox(context).apply {
+                                            text = "使用在线汉化"
+                                            isChecked = useOnlineLang
+                                            setOnCheckedChangeListener { _, isChecked ->
+                                                useOnlineLang = isChecked
+                                                pref.edit().putBoolean("use_online_lang", isChecked).apply()
+                                                if (isChecked) {
+                                                    Toast.makeText(context, "开始下载", Toast.LENGTH_SHORT).show()
+                                                    downloadFile(context, BuildConfig.LANG_URL, "lang_zh.xml")
+                                                }
+                                            }
+                                        })
+                                        addView(TextView(context).apply {
+                                            textSize = 10.0f
+                                            setTypeface(null, Typeface.ITALIC)
+                                            setTextColor(Color.GRAY)
+                                            text = "* 本软件仅供学习交流使用，禁止用于商业用途"
+                                        })
+                                    })
+                                    .setNegativeButton("重启") { dialog, _ ->
                                         dialog.dismiss()
-                                        Toast.makeText(context, "开始下载", Toast.LENGTH_SHORT).show()
-                                        downloadFile(context, BuildConfig.LANG_URL, "lang_zh.xml")
+                                        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                                        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                        context.startActivity(intent)
+                                        android.os.Process.killProcess(android.os.Process.myPid())
                                     }
                                     .setPositiveButton("关闭", null)
                                     .show()
