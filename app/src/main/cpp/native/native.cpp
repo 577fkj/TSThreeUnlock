@@ -93,7 +93,7 @@ unsigned int old_rsa_key_size = sizeof(old_rsa_key);
 HOOK_DEF(int, rsa_import, const unsigned char *in, unsigned long inlen, void *key) {
     LOGD("rsa_import call!");
 //    dump("rsa_import", (void *) in, (int) inlen);
-    if (inlen == 294 && memcmp(in, old_rsa_key, old_rsa_key_size) == 0) {
+    if (inlen == old_rsa_key_size && memcmp(in, old_rsa_key, old_rsa_key_size) == 0) {
         LOGD("rsa_import: old key detected, replacing with new key");
         memcpy((void *) in, rsa_key, old_rsa_key_size);
     }

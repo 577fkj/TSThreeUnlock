@@ -1,17 +1,33 @@
 package cn.fkj233.tsunlocker.hook
 
+import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.AssetManager
+import android.graphics.Color
+import android.graphics.Typeface
+import android.net.Uri
 import android.util.Base64
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
 import cn.fkj233.tsunlocker.BuildConfig
+import cn.fkj233.tsunlocker.R
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.factory.configs
 import com.highcapable.yukihookapi.hook.factory.encase
+import com.highcapable.yukihookapi.hook.factory.field
 import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.log.loggerD
 import com.highcapable.yukihookapi.hook.log.loggerE
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
+import java.io.File
 import java.security.KeyFactory
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
@@ -23,6 +39,12 @@ class HookEntry : IYukiHookXposedInit {
         debugLog {
             tag = "TS_Hook"
         }
+    }
+
+    @SuppressLint("DiscouragedApi")
+    fun Context.getIdentifier(name: String): Int {
+        val names = name.split(".")
+        return resources.getIdentifier(names[1], names[0], packageName)
     }
 
     data class LVL(val code: Int, val nonce: Int, val packName: String, val version: Int, val userId: String, val timestamp: Long = System.currentTimeMillis(), val extra: HashMap<String, String>) {
@@ -62,10 +84,42 @@ class HookEntry : IYukiHookXposedInit {
         "GT" to "4102372799000",
     ))
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun downloadFile(context: Context, url: String, fileName: String) {
+        val downloadId = context.getSystemService(DownloadManager::class.java).enqueue(DownloadManager.Request(Uri.parse(url)).apply {
+            setTitle("下载文件")
+            setDescription("正在下载文件")
+            setDestinationInExternalFilesDir(context, null, fileName)
+            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        })
+        val broadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent
+            ) {
+                val id = intent.getLongExtra(
+                    DownloadManager.EXTRA_DOWNLOAD_ID,
+                    -1
+                )
+                if (id == downloadId) {
+                    Toast.makeText(
+                        context,
+                        "任务:$downloadId 下载完成!",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    context.unregisterReceiver(this)
+                }
+            }
+        }
+        context.registerReceiver(broadcastReceiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+    }
+
+    @SuppressLint("SetTextI18n")
     override fun onHook() = encase {
         loadApp(name = "com.teamspeak.ts3client") {
             System.loadLibrary("native")
 
+            val assetList = moduleAppResources.assets.list("app_assets")
             // Wtf, use yuki api appear bug
             XposedHelpers.findAndHookMethod(AssetManager::class.java, "open", String::class.java, Int::class.java, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
@@ -76,15 +130,28 @@ class HookEntry : IYukiHookXposedInit {
                     }
                     if (path == "lang/lang_eng.xml") {
                         loggerD(msg = "replace lang_eng.xml to lang_zh.xml")
+                        val file = File(appContext?.getExternalFilesDir(null), "lang_zh.xml")
+                        if (file.exists() && !BuildConfig.DEBUG) {
+                            if (
+                                runCatching {
+                                    param.result = file.inputStream()
+                                }.isSuccess
+                            ) {
+                                loggerD(msg = "use external lang_zh.xml")
+                                return
+                            }
+                        }
                         param.result = moduleAppResources.assets.open(
                             "app_assets/lang_zh.xml",
                             AssetManager.ACCESS_STREAMING
                         )
                     } else if (path.startsWith("sound/female/")){
-                        param.result = moduleAppResources.assets.open(
-                            "app_assets/$path",
-                            AssetManager.ACCESS_STREAMING
-                        )
+                        if (assetList?.contains(path) == true) {
+                            param.result = moduleAppResources.assets.open(
+                                "app_assets/$path",
+                                AssetManager.ACCESS_STREAMING
+                            )
+                        }
                     }
                 }
             })
@@ -97,12 +164,66 @@ class HookEntry : IYukiHookXposedInit {
                         return
                     }
                     if (path.startsWith("sound/female/")){
-                        param.result = moduleAppResources.assets.openFd(
-                            "app_assets/$path"
-                        )
+                        if (assetList?.contains(path) == true) {
+                            param.result = moduleAppResources.assets.openFd(
+                                "app_assets/$path"
+                            )
+                        }
                     }
                 }
             })
+
+            findClass(name = "com.teamspeak.ts3client.settings.w").hook {
+                injectMember {
+                    method {
+                        name = "f3"
+                    }
+                    beforeHook {
+                        val view = instance.javaClass.field {
+                            type = LinearLayout::class.java
+                        }.get(instance).cast<LinearLayout>()!!
+                        val context = view.context
+                        val appResources = context.resources
+                        view.addView(LinearLayout(context).apply {
+                            setOnClickListener {
+                                AlertDialog.Builder(context)
+                                    .setTitle("关于")
+                                    .setMessage("当前版本: ${BuildConfig.VERSION_NAME}\n作者：${moduleAppResources.getString(R.string.author)}")
+                                    .setNegativeButton("更新汉化") { dialog, _ ->
+                                        dialog.dismiss()
+                                        Toast.makeText(context, "开始下载", Toast.LENGTH_SHORT).show()
+                                        downloadFile(context, BuildConfig.LANG_URL, "lang_zh.xml")
+                                    }
+                                    .setPositiveButton("关闭", null)
+                                    .show()
+                            }
+                            orientation = LinearLayout.VERTICAL
+                            layoutParams = LinearLayout.LayoutParams(-1, -2)
+                            setBackgroundResource(context.getIdentifier("drawable.state_menu"))
+                            val dimensionPixelSize = appResources.getDimensionPixelSize(context.getIdentifier("dimen.settings_padding_lr"))
+                            val dimensionPixelSize2 = appResources.getDimensionPixelSize(context.getIdentifier("dimen.settings_padding_ud"))
+                            setPadding(
+                                dimensionPixelSize,
+                                dimensionPixelSize2,
+                                dimensionPixelSize,
+                                dimensionPixelSize2
+                            )
+                            addView(TextView(context).apply {
+                                textSize = 20.0f
+                                setTypeface(null, Typeface.BOLD)
+                                setTextColor(Color.WHITE)
+                                text = "TSThree设置"
+                            })
+                            addView(TextView(context).apply {
+                                textSize = 10.0f
+                                setTypeface(null, Typeface.ITALIC)
+                                setTextColor(Color.GRAY)
+                                text = "当前版本: ${BuildConfig.VERSION_NAME}"
+                            })
+                        })
+                    }
+                }
+            }
 
             findClass(name = "k3.m").hook {
                 injectMember {

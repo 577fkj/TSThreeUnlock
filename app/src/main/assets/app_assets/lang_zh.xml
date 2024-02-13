@@ -326,19 +326,19 @@
  </entry>
  <entry>
   <key>settings.ptt</key>
-  <value>使用按键通话</value>
+  <value>使用按键说话</value>
  </entry>
  <entry>
   <key>settings.ptt.text</key>
-  <value>启用按键通话</value>
+  <value>启用按键说话</value>
  </entry>
  <entry>
   <key>settings.android_overlay</key>
-  <value>使用PTT覆盖</value>
+  <value>说话按钮始终显示</value>
  </entry>
  <entry>
   <key>settings.android_overlay.text</key>
-  <value>始终可见的覆盖</value>
+  <value>始终可见的按钮</value>
  </entry>
  <entry>
   <key>settings.warning</key>

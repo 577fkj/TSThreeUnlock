@@ -1,5 +1,6 @@
 import java.io.File
 import java.util.Base64
+import org.gradle.api.tasks.Exec
 
 plugins {
     id("com.android.application")
@@ -23,6 +24,7 @@ android {
 
         buildConfigField("String", "PUBLIC_KEY", "\"${rsaData.publicKeyBase64}\"")
         buildConfigField("String", "PRIVATE_KEY", "\"${rsaData.privateKeyBase64}\"")
+        buildConfigField("String", "LANG_URL", "\"https://fastly.jsdelivr.net/gh/577fkj/TSThreeUnlock@main/app/src/main/assets/app_assets/lang_zh.xml\"")
 
         externalNativeBuild {
             cmake {
@@ -99,6 +101,23 @@ android {
                     }
                 }
             }
+        }
+    }
+}
+
+tasks.register("restartApp") {
+    val packageName = "com.teamspeak.ts3client"
+    val activityName = "com.teamspeak.ts3client.StartGUIFragment"
+
+    doLast {
+        // 停止应用程序
+        exec {
+            commandLine("adb", "shell", "am", "force-stop", packageName)
+        }
+
+        // 启动应用程序
+        exec {
+            commandLine("adb", "shell", "am", "start", "-n", "${packageName}/${activityName}")
         }
     }
 }
@@ -205,12 +224,7 @@ dependencies {
     compileOnly("de.robv.android.xposed:api:82")
     implementation("com.highcapable.yukihookapi:api:1.1.8")
     ksp("com.highcapable.yukihookapi:ksp-xposed:1.1.8")
-    implementation("com.github.duanhong169:drawabletoolbox:1.0.7")
-    implementation("androidx.core:core-ktx:1.9.0")
-    implementation("androidx.appcompat:appcompat:1.5.1")
-    implementation("com.google.android.material:material:1.6.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.3")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
